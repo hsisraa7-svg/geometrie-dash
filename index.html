@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Geometry Dash</title>
+<style>
+    body { margin: 0; overflow: hidden; background: black; }
+    #score {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        color: cyan;
+        font-family: Arial;
+        font-size: 22px;
+    }
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+/* Scene */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+/* Camera – SIDE VIEW */
+const camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+);
+camera.position.set(5, 2, 8);
+camera.lookAt(0, 1, 0);
+
+/* Renderer */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* Light */
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(10, 10, 10);
+scene.add(light);
+
+/* Ground */
+const ground = new THREE.Mesh(
+    new THREE.BoxGeometry(300, 1, 6),
+    new THREE.MeshStandardMaterial({ color: 0x222222 })
+);
+ground.position.y = -0.5;
+scene.add(ground);
+
+/* Player */
+const player = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x00ffcc })
+);
+player.position.set(0, 0.5, 0);
+scene.add(player);
+
+/* Physics */
+let velocityY = 0;
+const gravity = -0.025;
+let jumping = false;
+
+/* Obstacles */
+const obstacles = [];
+function spawnObstacle() {
+    const obs = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial({ color: 0xff0055 })
+    );
+    obs.position.set(15, 0.5, 0);
+    scene.add(obs);
+    obstacles.push(obs);
+}
+setInterval(spawnObstacle, 1600);
+
+/* Controls */
+document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !jumping) {
+        velocityY = 0.42;
+        jumping = true;
+    }
+});
+
+/* Score */
+let score = 0;
+const scoreText = document.getElementById("score");
+
+/* Loop */
+function animate() {
+    requestAnimationFrame(animate);
+
+    /* Jump */
+    velocityY += gravity;
+    player.position.y += velocityY;
+
+    if (player.position.y <= 0.5) {
+        player.position.y = 0.5;
+        velocityY = 0;
+        jumping = false;
+        player.rotation.z = 0;
+    } else {
+        player.rotation.z += 0.15;
+    }
+
+    /* Camera follows player (smooth) */
+    camera.position.x = player.position.x + 5;
+
+    /* Obstacles */
+    obstacles.forEach((obs, i) => {
+        obs.position.x -= 0.22;
+
+        /* Collision */
+        if (
+            Math.abs(obs.position.x - player.position.x) < 0.75 &&
+            Math.abs(obs.position.y - player.position.y) < 0.75
+        ) {
+            alert("Game Over! Score: " + score);
+            location.reload();
+        }
+
+        /* Cleanup */
+        if (obs.position.x < player.position.x - 10) {
+            scene.remove(obs);
+            obstacles.splice(i, 1);
+        }
+    });
+
+    /* Score */
+    score++;
+    scoreText.textContent = "Score: " + score;
+
+    renderer.render(scene, camera);
+}
+
+animate();
+
+/* Resize */
+window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+</body>
+</html>
